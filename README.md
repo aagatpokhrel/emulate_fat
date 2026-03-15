@@ -1,3 +1,0 @@
-FATRW
-jdisk_test
-*.sh

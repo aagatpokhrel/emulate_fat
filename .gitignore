@@ -1,3 +1,6 @@
 FATRW
 jdisk_test
 *.sh
+*.jdisk
+FAT
+*.txt
