@@ -13,7 +13,7 @@ typedef struct {
     int *fat_dirty;
 } FAT_System;
 
-/* Helper to calculate S and D based on disk size */
+// calculate size of S and D based on disk
 void calculate_dimensions(unsigned long size, unsigned int *S, unsigned int *D) {
     unsigned int total = size / JDISK_SECTOR_SIZE;
     for (unsigned int d = total; d > 0; d--) {
@@ -26,7 +26,7 @@ void calculate_dimensions(unsigned long size, unsigned int *S, unsigned int *D) 
     }
 }
 
-/* Reads a link from the FAT cache, loading from disk if necessary */
+// reads a link from the FAT cache, loading from disk if needed
 unsigned short Read_Link(FAT_System *fs, int index) {
     int sector_idx = (index * 2) / JDISK_SECTOR_SIZE;
     int offset = (index * 2) % JDISK_SECTOR_SIZE;
@@ -40,7 +40,7 @@ unsigned short Read_Link(FAT_System *fs, int index) {
     return ptr[offset] | (ptr[offset + 1] << 8);
 }
 
-/* Writes a link to the cache and marks the sector as dirty if changed */
+// writes a link to the cache and marks the sector as dirty if changed
 void Write_Link(FAT_System *fs, int index, unsigned short val) {
     int sector_idx = (index * 2) / JDISK_SECTOR_SIZE;
     int offset = (index * 2) % JDISK_SECTOR_SIZE;
@@ -71,6 +71,7 @@ void Flush_Links(FAT_System *fs) {
 
 int main(int argc, char **argv) {
     if (argc < 4) {
+        // error in usage, provide details of use
         fprintf(stderr, "usage: FATRW diskfile import input-file\n");
         fprintf(stderr, "       FATRW diskfile export starting-block output-file\n");
         exit(1);
@@ -91,7 +92,7 @@ int main(int argc, char **argv) {
         unsigned int sectors_needed = (st.st_size + JDISK_SECTOR_SIZE - 1) / JDISK_SECTOR_SIZE;
         if (st.st_size == 0) sectors_needed = 1;
 
-        // Count free sectors
+        // how many free sectors
         unsigned int free_count = 0;
         unsigned short curr = Read_Link(&fs, 0);
         while (curr != 0) {
@@ -115,7 +116,7 @@ int main(int argc, char **argv) {
             size_t bytes_read = fread(buffer, 1, JDISK_SECTOR_SIZE, fin);
             unsigned short next_link_idx = Read_Link(&fs, curr_link_idx);
 
-            if (i == sectors_needed - 1) { // Last sector logic
+            if (i == sectors_needed - 1) { // last sector logic
                 if (bytes_read == JDISK_SECTOR_SIZE) {
                     Write_Link(&fs, curr_link_idx, 0);
                 } else if (bytes_read == 1023) {
@@ -126,9 +127,11 @@ int main(int argc, char **argv) {
                     buffer[1023] = (bytes_read >> 8) & 0xFF;
                     Write_Link(&fs, curr_link_idx, curr_link_idx);
                 }
-                Write_Link(&fs, prev_link_idx, next_link_idx); // Point free list head to next
+                // point free list head to next
+                Write_Link(&fs, prev_link_idx, next_link_idx); 
             } else {
-                Write_Link(&fs, prev_link_idx, next_link_idx); // Bypass this block in free list
+                // else bypass this block in free list
+                Write_Link(&fs, prev_link_idx, next_link_idx); 
             }
 
             jdisk_write(fs.jd, fs.s_sectors + curr_link_idx - 1, buffer);
@@ -137,13 +140,14 @@ int main(int argc, char **argv) {
                 unsigned short next_in_file = next_link_idx;
                 Write_Link(&fs, curr_link_idx, next_in_file);
                 curr_link_idx = next_in_file;
-                prev_link_idx = 0; // Always pull from head of free list
+                //  pull from head of free list
+                prev_link_idx = 0; 
             }
         }
         
         Flush_Links(&fs);
         fclose(fin);
-        printf("New file starts at sector %u\n", fs.s_sectors + first_block - 1);
+        printf("File starts at sector %u\n", fs.s_sectors + first_block - 1);
 
     } else if (strcmp(argv[2], "export") == 0) {
         unsigned int start_sector = atoi(argv[3]);
